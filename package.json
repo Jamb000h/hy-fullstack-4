@@ -1,0 +1,22 @@
+{
+  "name": "4.1-4.21",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "nodemon index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "cors": "^2.8.4",
+    "dotenv": "^6.0.0",
+    "express": "^4.16.3",
+    "http": "0.0.0",
+    "mongoose": "^5.2.3",
+    "nodemon": "^1.18.1",
+    "save-dev": "^2.0.0"
+  }
+}
