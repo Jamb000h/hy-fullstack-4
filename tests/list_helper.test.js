@@ -138,3 +138,28 @@ describe('most blogs', () => {
     )
   })
 })
+
+describe('most likes', () => {
+  test('of empty list is an empty object', () => {
+    const result = listHelper.mostLikes([])
+
+    expect(result).toEqual({})
+  })
+
+  test('of a single item is the same item', () => {
+    const result = listHelper.mostLikes(singleBlog)
+
+    expect(result).toEqual(singleBlog[0])
+  })
+
+  test('of multiple items is correct', () => {
+    const result = listHelper.mostLikes(blogs)
+
+    expect(result).toEqual(
+      {
+        author: 'Edsger W. Dijkstra',
+        likes: 17
+      }
+    )
+  })
+})
