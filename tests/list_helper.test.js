@@ -113,3 +113,28 @@ describe('favorite blog', () => {
 
   })
 })
+
+describe('most blogs', () => {
+  test('of empty list is an empty object', () => {
+    const result = listHelper.mostBlogs([])
+
+    expect(result).toEqual({})
+  })
+
+  test('of a single item is the same item', () => {
+    const result = listHelper.mostBlogs(singleBlog)
+
+    expect(result).toEqual(singleBlog[0])
+  })
+
+  test('of multiple items is correct', () => {
+    const result = listHelper.mostBlogs(blogs)
+
+    expect(result).toEqual(
+      {
+        author: 'Robert C. Martin',
+        blogs: 3
+      }
+    )
+  })
+})
