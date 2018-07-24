@@ -127,6 +127,36 @@ describe('POST /api/blogs', () => {
 
     expect(response.body.likes).toBe(0)
   })
+
+  test('a blog without title returns bad request', async () => {
+
+    const newBlog = {
+      author: 'Edsger W. Dijkstra',
+      url: 'http://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD808.html',
+      likes: 55
+    }
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(400)
+      .expect('Content-Type', /application\/json/)
+  })
+
+  test('a blog without url returns bad request', async () => {
+
+    const newBlog = {
+      title: 'Canonical string reduction',
+      author: 'Edsger W. Dijkstra',
+      likes: 15
+    }
+
+    await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(400)
+      .expect('Content-Type', /application\/json/)
+  })
 })
 
 afterAll(() => {
