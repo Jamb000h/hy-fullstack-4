@@ -149,6 +149,42 @@ describe('POST /api/blogs', () => {
   })
 })
 
+describe('DELETE /api/blogs', () => {
+  test('a blog can be removed', async () => {
+
+    const blogsInDatabase = await blogsInDb()
+
+    const blogToRemove = blogsInDatabase[0]
+
+    await api
+      .delete(`/api/blogs/${blogToRemove.id}`)
+      .expect(204)
+
+    const blogsInDatabaseAfterOperation = await blogsInDb()
+
+    expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length - 1)
+
+    const titles = blogsInDatabaseAfterOperation.map(blog => blog.title)
+    expect(titles).not.toContain(blogToRemove.title)
+  })
+
+  test('404 returned with nonexisting id', async () => {
+    const validNonexistingId = await nonExistingId()
+
+    await api
+      .delete(`/api/blogs/${validNonexistingId}`)
+      .expect(404)
+  })
+
+  test('400 returned with malformed id', async () => {
+    const invalidId = 'jonnekanervaheippahei'
+
+    await api
+      .delete(`/api/blogs/${invalidId}`)
+      .expect(400)
+  })
+})
+
 afterAll(() => {
   server.close()
 })
