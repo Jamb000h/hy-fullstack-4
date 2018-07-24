@@ -51,6 +51,30 @@ blogsRouter.post('/', async (request, response) => {
   }
 })
 
+blogsRouter.put('/:id', async (request, response) => {
+  try {
+    if(request.body.title === undefined)
+      return response.status(400).json({ error: 'Title is required!' })
+
+    if(request.body.url === undefined)
+      return response.status(400).json({ error: 'URL is required!' })
+
+    if(request.body.likes === undefined)
+      request.body.likes = 0
+
+    const updatedBlog = await Blog.findByIdAndUpdate(request.params.id, request.body, { new: true })
+
+    if(updatedBlog) {
+      response.status(200).end()
+    } else {
+      response.status(404).json({ error: 'Blog not found' })
+    }
+  } catch (e) {
+    console.log(e)
+    response.status(400).json({ error: 'Malformed id' })
+  }
+})
+
 blogsRouter.delete('/:id', async (request, response) => {
   try {
     const blog = await Blog.findByIdAndRemove(request.params.id)

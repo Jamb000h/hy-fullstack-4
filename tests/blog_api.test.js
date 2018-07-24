@@ -149,6 +149,88 @@ describe('POST /api/blogs', () => {
   })
 })
 
+describe('PUT /api/blogs', () => {
+  test('a valid blog can be updated', async () => {
+
+    const blogsInDatabase = await blogsInDb()
+
+    const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
+
+    await api
+      .put(`/api/blogs/${updatedBlog.id}`)
+      .send(updatedBlog)
+      .expect(200)
+
+    const blogsInDatabaseAfterOperation = await blogsInDb()
+
+    expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
+    expect(blogsInDatabaseAfterOperation).toContainEqual(updatedBlog)
+  })
+
+  test('a blog without title returns bad request', async () => {
+
+    const blogsInDatabase = await blogsInDb()
+
+    const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
+
+    delete updatedBlog.title
+
+    await api
+      .put(`/api/blogs/${updatedBlog.id}`)
+      .send(updatedBlog)
+      .expect(400)
+      .expect('Content-Type', /application\/json/)
+
+    const blogsInDatabaseAfterOperation = await blogsInDb()
+    expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
+  })
+
+  test('a blog without url returns bad request', async () => {
+
+    const blogsInDatabase = await blogsInDb()
+
+    const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
+
+    delete updatedBlog.url
+
+    await api
+      .put(`/api/blogs/${updatedBlog.id}`)
+      .send(updatedBlog)
+      .expect(400)
+      .expect('Content-Type', /application\/json/)
+
+    const blogsInDatabaseAfterOperation = await blogsInDb()
+    expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
+  })
+
+  test('404 returned with nonexisting id', async () => {
+    const validNonexistingId = await nonExistingId()
+
+    const blogsInDatabase = await blogsInDb()
+
+    const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
+
+    await api
+      .put(`/api/blogs/${validNonexistingId}`)
+      .send(updatedBlog)
+      .expect(404)
+  })
+
+  test('400 returned with malformed id', async () => {
+    const invalidId = 'jonnekanervaheippahei'
+
+    const blogsInDatabase = await blogsInDb()
+
+    const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
+
+    await api
+      .put(`/api/blogs/${invalidId}`)
+      .send(updatedBlog)
+      .expect(400)
+  })
+
+})
+
 describe('DELETE /api/blogs', () => {
   test('a blog can be removed', async () => {
 
