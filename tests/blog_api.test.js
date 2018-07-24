@@ -110,6 +110,23 @@ describe('POST /api/blogs', () => {
     expect(response.body.length).toBe(initialBlogs.length + 1)
     expect(titles).toContain(newBlog.title)
   })
+
+  test('a valid blog without likes has likes set to zero', async () => {
+
+    const newBlog = {
+      title: 'Canonical string reduction',
+      author: 'Edsger W. Dijkstra',
+      url: 'http://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD808.html'
+    }
+
+    const response = await api
+      .post('/api/blogs')
+      .send(newBlog)
+      .expect(201)
+      .expect('Content-Type', /application\/json/)
+
+    expect(response.body.likes).toBe(0)
+  })
 })
 
 afterAll(() => {
