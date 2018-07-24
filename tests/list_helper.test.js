@@ -94,7 +94,11 @@ describe('favorite blog', () => {
   test('of a single item is the same item', () => {
     const result = listHelper.favoriteBlog(singleBlog)
 
-    expect(result).toEqual(singleBlog[0])
+    expect(result).toEqual({
+      title: 'Canonical string reduction',
+      author: 'Edsger W. Dijkstra',
+      likes: 12
+    })
   })
 
   test('of multiple items is correct', () => {
@@ -102,12 +106,9 @@ describe('favorite blog', () => {
 
     expect(result).toEqual(
       {
-        _id: '5a422b3a1b54a676234d17f9',
         title: 'Canonical string reduction',
         author: 'Edsger W. Dijkstra',
-        url: 'http://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD808.html',
-        likes: 12,
-        __v: 0
+        likes: 12
       }
     )
 
@@ -124,7 +125,10 @@ describe('most blogs', () => {
   test('of a single item is the same item', () => {
     const result = listHelper.mostBlogs(singleBlog)
 
-    expect(result).toEqual(singleBlog[0])
+    expect(result).toEqual({
+      author: 'Edsger W. Dijkstra',
+      blogs: 1
+    })
   })
 
   test('of multiple items is correct', () => {
@@ -149,7 +153,10 @@ describe('most likes', () => {
   test('of a single item is the same item', () => {
     const result = listHelper.mostLikes(singleBlog)
 
-    expect(result).toEqual(singleBlog[0])
+    expect(result).toEqual({
+      author: 'Edsger W. Dijkstra',
+      likes: 12
+    })
   })
 
   test('of multiple items is correct', () => {

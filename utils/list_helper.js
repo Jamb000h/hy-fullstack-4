@@ -2,22 +2,40 @@ const favoriteBlog = blogs => {
   if(blogs.length === 0)
     return {}
 
-  if(blogs.length === 1)
-    return blogs[0]
+  if(blogs.length === 1) {
+    const favoriteBlog = {
+      title: blogs[0].title,
+      author: blogs[0].author,
+      likes: blogs[0].likes
+    }
+    return favoriteBlog
+  }
 
   const sortedBlogs = blogs.sort( (a, b) => {
     return a.likes < b.likes
   })
 
-  return sortedBlogs[0]
+  const favoriteBlog = {
+    title: sortedBlogs[0].title,
+    author: sortedBlogs[0].author,
+    likes: sortedBlogs[0].likes
+  }
+
+  return favoriteBlog
 }
 
 const mostBlogs = blogs => {
   if(blogs.length === 0)
     return {}
 
-  if(blogs.length === 1)
-    return blogs[0]
+  if(blogs.length === 1) {
+    const mostBlogs = {
+      author: blogs[0].author,
+      blogs: 1
+    }
+
+    return mostBlogs
+  }
 
   const authorPosts = []
 
@@ -38,8 +56,14 @@ const mostLikes = blogs => {
   if(blogs.length === 0)
     return {}
 
-  if(blogs.length === 1)
-    return blogs[0]
+  if(blogs.length === 1) {
+    const mostLikes = {
+      author: blogs[0].author,
+      likes: blogs[0].likes
+    }
+
+    return mostLikes
+  }
 
   const authorPosts = []
 

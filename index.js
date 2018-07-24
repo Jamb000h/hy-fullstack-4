@@ -1,19 +1,17 @@
+const http = require('http')
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
 const cors = require('cors')
 const mongoose = require('mongoose')
 
-// Environment variables
-if ( process.env.NODE_ENV !== 'production' ) {
-  require('dotenv').config()
-}
+const config = require('./utils/config')
 
 // Connect to database
 mongoose
-  .connect(process.env.MONGODB_URI)
+  .connect(config.mongoURL)
   .then( () => {
-    console.log('connected to database', process.env.MONGODB_URI)
+    console.log('connected to database', config.mongoURL)
   })
   .catch( err => {
     console.log(err)
@@ -28,7 +26,18 @@ const blogsRouter = require('./controllers/blogs')
 app.use('/api/blogs', blogsRouter)
 
 // Start server
+const server = http.createServer(app)
+
 const PORT = 3003
-app.listen(PORT, () => {
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
+
+server.on('close', () => {
+  mongoose.connection.close()
+})
+
+module.exports = {
+  app, server
+}
