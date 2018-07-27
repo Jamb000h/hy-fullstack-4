@@ -22,11 +22,15 @@ app.use(cors())
 app.use(bodyParser.json())
 
 // Controllers
+
 const blogsRouter = require('./controllers/blogs')
 app.use('/api/blogs', blogsRouter)
 
 const usersRouter = require('./controllers/users')
 app.use('/api/users', usersRouter)
+
+const loginRouter = require('./controllers/login')
+app.use('/api/login', loginRouter)
 
 // Start server
 const server = http.createServer(app)
