@@ -2,7 +2,8 @@ const supertest = require('supertest')
 const { app, server } = require('../index')
 const api = supertest(app)
 const Blog = require('../models/blog')
-const { initialBlogs, nonExistingId, blogsInDb } = require('./test_helper')
+const User = require('../models/user')
+const { initialBlogs, nonExistingId, blogsInDb, usersInDb } = require('./test_helper')
 
 beforeAll(async () => {
   await Blog.remove({})
@@ -13,257 +14,396 @@ beforeAll(async () => {
 
 })
 
-describe('GET /api/blogs', () => {
-  test('blogs are returned as json', async () => {
-    await api
-      .get('/api/blogs')
-      .expect(200)
-      .expect('Content-Type', /application\/json/)
+describe('/api/users', async () => {
+
+  beforeAll(async () => {
+    await User.remove({})
+    const user = new User({
+      username: 'root',
+      password: 'sekret',
+      name: 'test-name',
+      adult: false
+    })
+    await user.save()
   })
 
-  test('all blogs are returned as json', async () => {
-    const blogsInDatabase = await blogsInDb()
+  describe('GET /api/users', () => {
+    test('users are returned as json', async () => {
+      await api
+        .get('/api/users')
+        .expect(200)
+        .expect('Content-Type', /application\/json/)
+    })
 
-    const response = await api
-      .get('/api/blogs')
-      .expect(200)
-      .expect('Content-Type', /application\/json/)
+    test('all users are returned as json', async () => {
+      const usersBeforeOperation = await usersInDb()
 
-    expect(response.body.length).toBe(blogsInDatabase.length)
+      const response = await api
+        .get('/api/users')
+        .expect(200)
+        .expect('Content-Type', /application\/json/)
 
-    blogsInDatabase.forEach(blog => {
-      expect(response.body).toContainEqual(blog)
+      expect(response.body.length).toBe(usersBeforeOperation.length)
+
+      usersBeforeOperation.forEach(user => {
+        expect(response.body).toContainEqual(user)
+      })
     })
   })
 
-  test('individual notes are returned as json', async () => {
-    const blogsInDatabase = await blogsInDb()
-    const aBlog = blogsInDatabase[0]
+  describe('POST /api/users', () => {
 
-    const response = await api
-      .get(`/api/blogs/${aBlog.id}`)
-      .expect(200)
-      .expect('Content-Type', /application\/json/)
+    test('creating succeeds with a fresh username', async () => {
+      const usersBeforeOperation = await usersInDb()
 
-    expect(response.body).toEqual(aBlog)
-  })
+      const newUser = {
+        username: 'root2',
+        name: 'test-user',
+        password: 'sekret',
+        adult: false
+      }
 
-  test('404 returned with nonexisting id', async () => {
-    const validNonexistingId = await nonExistingId()
+      await api
+        .post('/api/users')
+        .send(newUser)
+        .expect(200)
+        .expect('Content-Type', /application\/json/)
 
-    await api
-      .get(`/api/blogs/${validNonexistingId}`)
-      .expect(404)
-  })
+      const usersAfterOperation = await usersInDb()
+      expect(usersAfterOperation.length).toBe(usersBeforeOperation.length+1)
+      const usernames = usersAfterOperation.map(u => u.username)
+      expect(usernames).toContain(newUser.username)
+    })
 
-  test('400 returned with malformed id', async () => {
-    const invalidId = 'jonnekanervaheippahei'
+    test('adult is set to true if omitted', async () => {
+      const usersBeforeOperation = await usersInDb()
 
-    await api
-      .get(`/api/blogs/${invalidId}`)
-      .expect(400)
-  })
-})
+      const newUser = {
+        username: 'root3',
+        name: 'test-user',
+        password: 'sekret'
+      }
 
-describe('POST /api/blogs', () => {
-  test('a valid blog can be added', async () => {
+      const response = await api
+        .post('/api/users')
+        .send(newUser)
+        .expect(200)
+        .expect('Content-Type', /application\/json/)
 
-    const blogsInDatabase = await blogsInDb()
+      expect(response.body.adult).toBe(true)
 
-    const newBlog = {
-      title: 'Canonical string reduction uusi',
-      author: 'Edsger W. Dijkstra',
-      url: 'http://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD808.html',
-      likes: 0
-    }
+      const usersAfterOperation = await usersInDb()
+      expect(usersAfterOperation.length).toBe(usersBeforeOperation.length+1)
+    })
 
-    await api
-      .post('/api/blogs')
-      .send(newBlog)
-      .expect(201)
-      .expect('Content-Type', /application\/json/)
+    test('creating fails with a duplicate username', async () => {
+      const usersBeforeOperation = await usersInDb()
 
-    const blogsInDatabaseAfterOperation = await blogsInDb()
+      const newUser = {
+        username: 'root',
+        name: 'test-user',
+        password: 'sekret'
+      }
 
-    expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length + 1)
+      const result = await api
+        .post('/api/users')
+        .send(newUser)
+        .expect(400)
+        .expect('Content-Type', /application\/json/)
 
-    const titles = blogsInDatabaseAfterOperation.map(blog => blog.title)
-    expect(titles).toContain(newBlog.title)
-  })
+      expect(result.body).toEqual({ error: 'username must be unique' })
 
-  test('a valid blog without likes has likes set to zero', async () => {
+      const usersAfterOperation = await usersInDb()
+      expect(usersAfterOperation.length).toBe(usersBeforeOperation.length)
+    })
 
-    const newBlog = {
-      title: 'Canonical string reduction',
-      author: 'Edsger W. Dijkstra',
-      url: 'http://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD808.html'
-    }
+    test('creating fails with too short password', async () => {
+      const usersBeforeOperation = await usersInDb()
 
-    const response = await api
-      .post('/api/blogs')
-      .send(newBlog)
-      .expect(201)
-      .expect('Content-Type', /application\/json/)
+      const newUser = {
+        username: 'root',
+        name: 'test-user',
+        password: 'se'
+      }
 
-    expect(response.body.likes).toBe(0)
-  })
+      const result = await api
+        .post('/api/users')
+        .send(newUser)
+        .expect(400)
+        .expect('Content-Type', /application\/json/)
 
-  test('a blog without title returns bad request', async () => {
+      expect(result.body).toEqual({ error: 'minimum password length is 3 characters' })
 
-    const blogsInDatabase = await blogsInDb()
+      const usersAfterOperation = await usersInDb()
+      expect(usersAfterOperation.length).toBe(usersBeforeOperation.length)
+    })
 
-    const newBlog = {
-      author: 'Edsger W. Dijkstra',
-      url: 'http://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD808.html',
-      likes: 55
-    }
-
-    await api
-      .post('/api/blogs')
-      .send(newBlog)
-      .expect(400)
-      .expect('Content-Type', /application\/json/)
-
-    const blogsInDatabaseAfterOperation = await blogsInDb()
-    expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
-  })
-
-  test('a blog without url returns bad request', async () => {
-
-    const blogsInDatabase = await blogsInDb()
-
-    const newBlog = {
-      title: 'Canonical string reduction',
-      author: 'Edsger W. Dijkstra',
-      likes: 15
-    }
-
-    await api
-      .post('/api/blogs')
-      .send(newBlog)
-      .expect(400)
-      .expect('Content-Type', /application\/json/)
-
-    const blogsInDatabaseAfterOperation = await blogsInDb()
-    expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
-  })
-})
-
-describe('PUT /api/blogs', () => {
-  test('a valid blog can be updated', async () => {
-
-    const blogsInDatabase = await blogsInDb()
-
-    const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
-
-    await api
-      .put(`/api/blogs/${updatedBlog.id}`)
-      .send(updatedBlog)
-      .expect(200)
-
-    const blogsInDatabaseAfterOperation = await blogsInDb()
-
-    expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
-    expect(blogsInDatabaseAfterOperation).toContainEqual(updatedBlog)
-  })
-
-  test('a blog without title returns bad request', async () => {
-
-    const blogsInDatabase = await blogsInDb()
-
-    const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
-
-    delete updatedBlog.title
-
-    await api
-      .put(`/api/blogs/${updatedBlog.id}`)
-      .send(updatedBlog)
-      .expect(400)
-      .expect('Content-Type', /application\/json/)
-
-    const blogsInDatabaseAfterOperation = await blogsInDb()
-    expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
-  })
-
-  test('a blog without url returns bad request', async () => {
-
-    const blogsInDatabase = await blogsInDb()
-
-    const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
-
-    delete updatedBlog.url
-
-    await api
-      .put(`/api/blogs/${updatedBlog.id}`)
-      .send(updatedBlog)
-      .expect(400)
-      .expect('Content-Type', /application\/json/)
-
-    const blogsInDatabaseAfterOperation = await blogsInDb()
-    expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
-  })
-
-  test('404 returned with nonexisting id', async () => {
-    const validNonexistingId = await nonExistingId()
-
-    const blogsInDatabase = await blogsInDb()
-
-    const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
-
-    await api
-      .put(`/api/blogs/${validNonexistingId}`)
-      .send(updatedBlog)
-      .expect(404)
-  })
-
-  test('400 returned with malformed id', async () => {
-    const invalidId = 'jonnekanervaheippahei'
-
-    const blogsInDatabase = await blogsInDb()
-
-    const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
-
-    await api
-      .put(`/api/blogs/${invalidId}`)
-      .send(updatedBlog)
-      .expect(400)
   })
 
 })
 
-describe('DELETE /api/blogs', () => {
-  test('a blog can be removed', async () => {
+describe('/api/blogs', async () => {
 
-    const blogsInDatabase = await blogsInDb()
+  beforeAll(async () => {
+    await Blog.remove({})
 
-    const blogToRemove = blogsInDatabase[0]
-
-    await api
-      .delete(`/api/blogs/${blogToRemove.id}`)
-      .expect(204)
-
-    const blogsInDatabaseAfterOperation = await blogsInDb()
-
-    expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length - 1)
-
-    const titles = blogsInDatabaseAfterOperation.map(blog => blog.title)
-    expect(titles).not.toContain(blogToRemove.title)
+    const blogObjects = initialBlogs.map( blog => new Blog(blog))
+    const promiseArray = blogObjects.map(blog => blog.save())
+    await Promise.all(promiseArray)
   })
 
-  test('404 returned with nonexisting id', async () => {
-    const validNonexistingId = await nonExistingId()
+  describe('GET /api/blogs', () => {
+    test('blogs are returned as json', async () => {
+      await api
+        .get('/api/blogs')
+        .expect(200)
+        .expect('Content-Type', /application\/json/)
+    })
 
-    await api
-      .delete(`/api/blogs/${validNonexistingId}`)
-      .expect(404)
+    test('all blogs are returned as json', async () => {
+      const blogsInDatabase = await blogsInDb()
+
+      const response = await api
+        .get('/api/blogs')
+        .expect(200)
+        .expect('Content-Type', /application\/json/)
+
+      expect(response.body.length).toBe(blogsInDatabase.length)
+
+      blogsInDatabase.forEach(blog => {
+        expect(response.body).toContainEqual(blog)
+      })
+    })
+
+    test('individual blogs are returned as json', async () => {
+      const blogsInDatabase = await blogsInDb()
+      const aBlog = blogsInDatabase[0]
+
+      const response = await api
+        .get(`/api/blogs/${aBlog.id}`)
+        .expect(200)
+        .expect('Content-Type', /application\/json/)
+
+      expect(response.body).toEqual(aBlog)
+    })
+
+    test('404 returned with nonexisting id', async () => {
+      const validNonexistingId = await nonExistingId()
+
+      await api
+        .get(`/api/blogs/${validNonexistingId}`)
+        .expect(404)
+    })
+
+    test('400 returned with malformed id', async () => {
+      const invalidId = 'jonnekanervaheippahei'
+
+      await api
+        .get(`/api/blogs/${invalidId}`)
+        .expect(400)
+    })
   })
 
-  test('400 returned with malformed id', async () => {
-    const invalidId = 'jonnekanervaheippahei'
+  describe('POST /api/blogs', () => {
+    test('a valid blog can be added', async () => {
 
-    await api
-      .delete(`/api/blogs/${invalidId}`)
-      .expect(400)
+      const blogsInDatabase = await blogsInDb()
+
+      const newBlog = {
+        title: 'Canonical string reduction uusi',
+        author: 'Edsger W. Dijkstra',
+        url: 'http://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD808.html',
+        likes: 0
+      }
+
+      await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(201)
+        .expect('Content-Type', /application\/json/)
+
+      const blogsInDatabaseAfterOperation = await blogsInDb()
+
+      expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length + 1)
+
+      const titles = blogsInDatabaseAfterOperation.map(blog => blog.title)
+      expect(titles).toContain(newBlog.title)
+    })
+
+    test('a valid blog without likes has likes set to zero', async () => {
+
+      const newBlog = {
+        title: 'Canonical string reduction',
+        author: 'Edsger W. Dijkstra',
+        url: 'http://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD808.html'
+      }
+
+      const response = await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(201)
+        .expect('Content-Type', /application\/json/)
+
+      expect(response.body.likes).toBe(0)
+    })
+
+    test('a blog without title returns bad request', async () => {
+
+      const blogsInDatabase = await blogsInDb()
+
+      const newBlog = {
+        author: 'Edsger W. Dijkstra',
+        url: 'http://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD808.html',
+        likes: 55
+      }
+
+      await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(400)
+        .expect('Content-Type', /application\/json/)
+
+      const blogsInDatabaseAfterOperation = await blogsInDb()
+      expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
+    })
+
+    test('a blog without url returns bad request', async () => {
+
+      const blogsInDatabase = await blogsInDb()
+
+      const newBlog = {
+        title: 'Canonical string reduction',
+        author: 'Edsger W. Dijkstra',
+        likes: 15
+      }
+
+      await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .expect(400)
+        .expect('Content-Type', /application\/json/)
+
+      const blogsInDatabaseAfterOperation = await blogsInDb()
+      expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
+    })
+  })
+
+  describe('PUT /api/blogs', () => {
+    test('a valid blog can be updated', async () => {
+
+      const blogsInDatabase = await blogsInDb()
+
+      const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
+
+      await api
+        .put(`/api/blogs/${updatedBlog.id}`)
+        .send(updatedBlog)
+        .expect(200)
+
+      const blogsInDatabaseAfterOperation = await blogsInDb()
+
+      expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
+      expect(blogsInDatabaseAfterOperation).toContainEqual(updatedBlog)
+    })
+
+    test('a blog without title returns bad request', async () => {
+
+      const blogsInDatabase = await blogsInDb()
+
+      const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
+
+      delete updatedBlog.title
+
+      await api
+        .put(`/api/blogs/${updatedBlog.id}`)
+        .send(updatedBlog)
+        .expect(400)
+        .expect('Content-Type', /application\/json/)
+
+      const blogsInDatabaseAfterOperation = await blogsInDb()
+      expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
+    })
+
+    test('a blog without url returns bad request', async () => {
+
+      const blogsInDatabase = await blogsInDb()
+
+      const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
+
+      delete updatedBlog.url
+
+      await api
+        .put(`/api/blogs/${updatedBlog.id}`)
+        .send(updatedBlog)
+        .expect(400)
+        .expect('Content-Type', /application\/json/)
+
+      const blogsInDatabaseAfterOperation = await blogsInDb()
+      expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
+    })
+
+    test('404 returned with nonexisting id', async () => {
+      const validNonexistingId = await nonExistingId()
+
+      const blogsInDatabase = await blogsInDb()
+
+      const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
+
+      await api
+        .put(`/api/blogs/${validNonexistingId}`)
+        .send(updatedBlog)
+        .expect(404)
+    })
+
+    test('400 returned with malformed id', async () => {
+      const invalidId = 'jonnekanervaheippahei'
+
+      const blogsInDatabase = await blogsInDb()
+
+      const updatedBlog = { ...blogsInDatabase[0], likes: 777 }
+
+      await api
+        .put(`/api/blogs/${invalidId}`)
+        .send(updatedBlog)
+        .expect(400)
+    })
+
+  })
+
+  describe('DELETE /api/blogs', () => {
+    test('a blog can be removed', async () => {
+
+      const blogsInDatabase = await blogsInDb()
+
+      const blogToRemove = blogsInDatabase[0]
+
+      await api
+        .delete(`/api/blogs/${blogToRemove.id}`)
+        .expect(204)
+
+      const blogsInDatabaseAfterOperation = await blogsInDb()
+
+      expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length - 1)
+
+      const titles = blogsInDatabaseAfterOperation.map(blog => blog.title)
+      expect(titles).not.toContain(blogToRemove.title)
+    })
+
+    test('404 returned with nonexisting id', async () => {
+      const validNonexistingId = await nonExistingId()
+
+      await api
+        .delete(`/api/blogs/${validNonexistingId}`)
+        .expect(404)
+    })
+
+    test('400 returned with malformed id', async () => {
+      const invalidId = 'jonnekanervaheippahei'
+
+      await api
+        .delete(`/api/blogs/${invalidId}`)
+        .expect(400)
+    })
   })
 })
 
