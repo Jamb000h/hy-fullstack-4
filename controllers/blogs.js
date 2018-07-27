@@ -46,7 +46,6 @@ blogsRouter.post('/', async (request, response) => {
 
     response.status(201).json(formatBlog(savedBlog))
   } catch (e) {
-    console.log(e)
     response.status(500).json({ error: 'Something went wrong' })
   }
 })
@@ -70,7 +69,6 @@ blogsRouter.put('/:id', async (request, response) => {
       response.status(404).json({ error: 'Blog not found' })
     }
   } catch (e) {
-    console.log(e)
     response.status(400).json({ error: 'Malformed id' })
   }
 })
