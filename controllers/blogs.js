@@ -1,26 +1,16 @@
 const blogsRouter = require('express').Router()
 const Blog = require('../models/blog')
 
-const formatBlog = blog => {
-  return {
-    id: blog._id,
-    title: blog.title,
-    author: blog.author,
-    url: blog.url,
-    likes: blog.likes
-  }
-}
-
 blogsRouter.get('/', async (request, response) => {
   const blogs = await Blog.find({})
-  response.json(blogs.map(formatBlog))
+  response.json(blogs.map(Blog.format))
 })
 
 blogsRouter.get('/:id', async (request, response) => {
   try {
     const blog = await Blog.findById(request.params.id)
     if(blog) {
-      response.json(formatBlog(blog))
+      response.json(Blog.format(blog))
     } else {
       response.status(404).json({ error: 'Blog not found' })
     }
@@ -44,7 +34,7 @@ blogsRouter.post('/', async (request, response) => {
 
     const savedBlog = await blog.save()
 
-    response.status(201).json(formatBlog(savedBlog))
+    response.status(201).json(Blog.format(savedBlog))
   } catch (e) {
     response.status(500).json({ error: 'Something went wrong' })
   }
