@@ -9,7 +9,6 @@ usersRouter.get('/', async (request, response) => {
 
     response.json(users.map(User.format))
   } catch (exception) {
-    console.log(exception)
     response.status(500).json({ error: 'something went wrong...' })
   }
 })
@@ -42,7 +41,6 @@ usersRouter.post('/', async (request, response) => {
 
     response.json(User.format(savedUser))
   } catch (exception) {
-    console.log(exception)
     response.status(500).json({ error: 'something went wrong...' })
   }
 })

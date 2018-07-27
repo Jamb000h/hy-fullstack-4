@@ -4,6 +4,7 @@ const app = express()
 const bodyParser = require('body-parser')
 const cors = require('cors')
 const mongoose = require('mongoose')
+const middleware = require('./utils/middleware')
 
 const config = require('./utils/config')
 
@@ -20,6 +21,9 @@ mongoose
 // Set CORS and body parsing mode
 app.use(cors())
 app.use(bodyParser.json())
+
+// Other middlewares
+app.use(middleware.tokenExtractor)
 
 // Controllers
 

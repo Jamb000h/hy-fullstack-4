@@ -4,14 +4,6 @@ const blogsRouter = require('express').Router()
 const Blog = require('../models/blog')
 const User = require('../models/user')
 
-const getTokenFrom = (request) => {
-  const authorization = request.get('authorization')
-  if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
-    return authorization.substring(7)
-  }
-  return null
-}
-
 blogsRouter.get('/', async (request, response) => {
   const blogs = await Blog.find({})
     .populate('user', { username: 1, name: 1 })
@@ -34,11 +26,9 @@ blogsRouter.get('/:id', async (request, response) => {
 
 blogsRouter.post('/', async (request, response) => {
   try {
+    const decodedToken = jwt.verify(request.token, process.env.SECRET)
 
-    const token = getTokenFrom(request)
-    const decodedToken = jwt.verify(token, process.env.SECRET)
-
-    if (!token || !decodedToken.id) {
+    if (!request.token || !decodedToken.id) {
       return response.status(401).json({ error: 'token missing or invalid' })
     }
 
@@ -47,9 +37,6 @@ blogsRouter.post('/', async (request, response) => {
 
     if(request.body.url === undefined)
       return response.status(400).json({ error: 'URL is required!' })
-
-    if(request.body.likes === undefined)
-      request.body.likes = 0
 
     const user = await User.findById(decodedToken.id)
 
@@ -75,32 +62,50 @@ blogsRouter.post('/', async (request, response) => {
     if (exception.name === 'JsonWebTokenError' ) {
       response.status(401).json({ error: exception.message })
     } else {
-      console.log(exception)
-      response.status(500).json({ error: 'something went wrong...' })
+      response.status(400).json({ error: 'malformed id' })
     }
   }
 })
 
 blogsRouter.put('/:id', async (request, response) => {
   try {
+    const decodedToken = jwt.verify(request.token, process.env.SECRET)
+
+    if (!request.token || !decodedToken.id) {
+      return response.status(401).json({ error: 'token missing or invalid' })
+    }
+
     if(request.body.title === undefined)
       return response.status(400).json({ error: 'Title is required!' })
 
     if(request.body.url === undefined)
       return response.status(400).json({ error: 'URL is required!' })
 
-    if(request.body.likes === undefined)
-      request.body.likes = 0
+    const user = await User.findById(decodedToken.id)
 
-    const updatedBlog = await Blog.findByIdAndUpdate(request.params.id, request.body, { new: true })
+    const body = request.body
 
-    if(updatedBlog) {
+    const updatedBlog = {
+      title: body.title,
+      author: body.author,
+      url: body.url,
+      likes: body.likes || 0,
+      user: user._id
+    }
+
+    const result = await Blog.findByIdAndUpdate(request.params.id, updatedBlog, { new: true })
+
+    if(result) {
       response.status(200).end()
     } else {
       response.status(404).json({ error: 'Blog not found' })
     }
-  } catch (e) {
-    response.status(400).json({ error: 'Malformed id' })
+  } catch(exception) {
+    if (exception.name === 'JsonWebTokenError' ) {
+      response.status(401).json({ error: exception.message })
+    } else {
+      response.status(400).json({ error: 'malformed id' })
+    }
   }
 })
 
