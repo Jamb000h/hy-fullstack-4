@@ -81,24 +81,21 @@ blogsRouter.put('/:id', async (request, response) => {
     if(request.body.url === undefined)
       return response.status(400).json({ error: 'URL is required!' })
 
-    const user = await User.findById(decodedToken.id)
-
     const body = request.body
 
     const updatedBlog = {
       title: body.title,
       author: body.author,
       url: body.url,
-      likes: body.likes || 0,
-      user: user._id
+      likes: body.likes || 0
     }
 
     const result = await Blog.findByIdAndUpdate(request.params.id, updatedBlog, { new: true })
 
     if(result) {
-      response.status(200).end()
+      return response.status(200).end()
     } else {
-      response.status(404).json({ error: 'Blog not found' })
+      return response.status(404).json({ error: 'Blog not found' })
     }
   } catch(exception) {
     if (exception.name === 'JsonWebTokenError' ) {
@@ -111,14 +108,34 @@ blogsRouter.put('/:id', async (request, response) => {
 
 blogsRouter.delete('/:id', async (request, response) => {
   try {
+    const decodedToken = jwt.verify(request.token, process.env.SECRET)
+
+    if (!request.token || !decodedToken.id) {
+      return response.status(401).json({ error: 'token missing or invalid' })
+    }
+
+    const user = await User.findById(decodedToken.id)
+
+    const blogToRemove = await Blog.findById(request.params.id)
+
+    if(!blogToRemove)
+      return response.status(404).json({ error: 'Blog not found' })
+
+    if(user.id.toString() !== blogToRemove.user.toString())
+      return response.status(401).json({ error: 'You cannot remove blogs made by other people' })
+
     const blog = await Blog.findByIdAndRemove(request.params.id)
     if(blog) {
       response.status(204).end()
     } else {
       response.status(404).json({ error: 'Blog not found' })
     }
-  } catch (e) {
-    response.status(400).json({ error: 'Malformatted id' })
+  } catch(exception) {
+    if (exception.name === 'JsonWebTokenError' ) {
+      response.status(401).json({ error: exception.message })
+    } else {
+      response.status(400).json({ error: 'malformed id' })
+    }
   }
 })
 

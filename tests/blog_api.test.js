@@ -70,14 +70,9 @@ describe('/api/login', async () => {
 describe('/api/blogs', async () => {
 
   let token
+  let token2
 
   beforeAll(async () => {
-    await Blog.remove({})
-
-    const blogObjects = initialBlogs.map( blog => new Blog(blog))
-    const promiseArray = blogObjects.map(blog => blog.save())
-    await Promise.all(promiseArray)
-
     await User.remove({})
     const user = new User({
       username: 'root',
@@ -99,6 +94,39 @@ describe('/api/blogs', async () => {
       .expect('Content-Type', /application\/json/)
 
     token = result.body.token
+
+    const user2 = new User({
+      username: 'root2',
+      passwordHash: await hashPassword('sekret2'),
+      name: 'test-name2',
+      adult: false
+    })
+    await user2.save()
+
+    const loginUser2 = {
+      username: 'root2',
+      password: 'sekret2'
+    }
+
+    const result2 = await api
+      .post('/api/login')
+      .send(loginUser2)
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+
+    token2 = result2.body.token
+
+    const decodedToken = await validateJWT(result.body.token)
+
+    await Blog.remove({})
+
+    const blogsWithUsers = initialBlogs.map(blog => {
+      return { ...blog, user: decodedToken.id }
+    })
+
+    const blogObjects = blogsWithUsers.map( blog => new Blog(blog))
+    const promiseArray = blogObjects.map(blog => blog.save())
+    await Promise.all(promiseArray)
   })
 
   describe('GET /api/blogs', async () => {
@@ -260,7 +288,6 @@ describe('/api/blogs', async () => {
         return delete blog.user
       })
 
-
       expect(blogsInDatabaseAfterWithoutUsers.length).toBe(blogsInDatabase.length)
       expect(blogsInDatabaseAfterWithoutUsers).toContainEqual(delete updatedBlog.user)
     })
@@ -342,6 +369,7 @@ describe('/api/blogs', async () => {
 
       await api
         .delete(`/api/blogs/${blogToRemove.id}`)
+        .set('Authorization', 'Bearer ' + token)
         .expect(204)
 
       const blogsInDatabaseAfterOperation = await blogsInDb()
@@ -357,6 +385,7 @@ describe('/api/blogs', async () => {
 
       await api
         .delete(`/api/blogs/${validNonexistingId}`)
+        .set('Authorization', 'Bearer ' + token)
         .expect(404)
     })
 
@@ -365,6 +394,33 @@ describe('/api/blogs', async () => {
 
       await api
         .delete(`/api/blogs/${invalidId}`)
+        .set('Authorization', 'Bearer ' + token)
+        .expect(400)
+    })
+
+    test('401 and correct error on invalid user deleting', async () => {
+      const blogsInDatabase = await blogsInDb()
+
+      const blogToRemove = blogsInDatabase[0]
+
+      const result = await api
+        .delete(`/api/blogs/${blogToRemove.id}`)
+        .set('Authorization', 'Bearer ' + token2)
+        .expect(401)
+
+      expect(result.body).toEqual({ error: 'You cannot remove blogs made by other people' })
+
+      const blogsInDatabaseAfterOperation = await blogsInDb()
+
+      expect(blogsInDatabaseAfterOperation.length).toBe(blogsInDatabase.length)
+    })
+
+    test('400 returned with malformed id', async () => {
+      const invalidId = 'jonnekanervaheippahei'
+
+      await api
+        .delete(`/api/blogs/${invalidId}`)
+        .set('Authorization', 'Bearer ' + token)
         .expect(400)
     })
   })
