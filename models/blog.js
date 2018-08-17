@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const User = require('./user')
 
 const blogSchema = mongoose.Schema({
   title: String,
@@ -15,7 +16,7 @@ blogSchema.statics.format = blog => {
     author: blog.author,
     url: blog.url,
     likes: blog.likes,
-    user: { ...blog.user, id: blog._id }.toString()
+    user: User.format(blog.user)
   }
 }
 
