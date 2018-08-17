@@ -124,8 +124,8 @@ blogsRouter.delete('/:id', async (request, response) => {
     if(user.id.toString() !== blogToRemove.user.toString())
       return response.status(401).json({ error: 'You cannot remove blogs made by other people' })
 
-    const blog = await Blog.findByIdAndRemove(request.params.id)
-    if(blog) {
+    const deletedBlog = await Blog.findByIdAndRemove(request.params.id)
+    if(deletedBlog) {
       response.status(204).end()
     } else {
       response.status(404).json({ error: 'Blog not found' })
