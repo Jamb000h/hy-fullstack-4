@@ -15,7 +15,7 @@ blogSchema.statics.format = blog => {
     author: blog.author,
     url: blog.url,
     likes: blog.likes,
-    user: blog.user.toString()
+    user: { ...blog.user, id: blog._id }.toString()
   }
 }
 
